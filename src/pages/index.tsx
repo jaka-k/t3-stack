@@ -2,22 +2,15 @@ import { SignInButton, SignOutButton, useUser } from "@clerk/nextjs";
 import { type NextPage } from "next";
 import Head from "next/head";
 import CreatePostWizard from "~/components/CreatePostWizard";
+import { LoadingPage } from "~/components/LoadingSpinner";
 import PostView from "~/components/PostView";
 
 import { api } from "~/utils/api";
 
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
-
-dayjs.extend(relativeTime);
-
 const Home: NextPage = () => {
-  const user = useUser();
-  console.log(user);
-  const { data, isLoading } = api.posts.getAll.useQuery();
+  const { user, isLoaded: userLoaded, isSignedIn } = useUser();
 
-  if (isLoading) return <div>Loading...</div>;
-  if (!data) return <div>Something went wrong</div>;
+  if (!userLoaded) return <div />;
 
   return (
     <>
@@ -29,18 +22,14 @@ const Home: NextPage = () => {
       <main className="flex h-screen justify-center">
         <div className="flex h-full w-full flex-col border-x border-slate-400 md:max-w-2xl">
           <div className="flex justify-center border-b border-slate-400 p-4">
-            {!user.isSignedIn && (
+            {!isSignedIn && (
               <div className="flex justify-center">
                 <SignInButton />
               </div>
             )}
-            {!!user.isSignedIn && <CreatePostWizard />}
+            {!!isSignedIn && <CreatePostWizard />}
           </div>
-          <div className="flex flex-col">
-            {[...data, ...data]?.map((fullPost) => (
-              <PostView {...fullPost} key={fullPost.post.id} />
-            ))}
-          </div>
+          <Feed />
         </div>
       </main>
     </>
@@ -48,3 +37,24 @@ const Home: NextPage = () => {
 };
 
 export default Home;
+
+const Feed = () => {
+  const { data, isLoading: postsLoading } = api.posts.getAll.useQuery();
+
+  if (postsLoading)
+    return (
+      <div className="flex grow">
+        <LoadingPage />
+      </div>
+    );
+
+  if (!data) return <div>Something went wrong</div>;
+
+  return (
+    <div className="flex grow flex-col overflow-y-scroll">
+      {[...data, ...data, ...data, ...data].map((fullPost) => (
+        <PostView {...fullPost} key={fullPost.post.id} />
+      ))}
+    </div>
+  );
+};
